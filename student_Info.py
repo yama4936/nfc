@@ -1,43 +1,38 @@
+from typing import cast
+
 import nfc
+from nfc.tag import Tag
+from nfc.tag.tt3 import BlockCode, ServiceCode, Type3Tag
+from nfc.tag.tt3_sony import FelicaStandard
 
-# **手動で設定する System Code**
-SYSTEM_CODE = 0xFE00  # `0x8E3A` や `0x0003` も試せる
-# **探索する Area の範囲**
-AREA_START = 0x1A81  # `Area 1A81`
-AREA_END = 0x1AFF    # `Area 1AFF`
-# **Service Code の探索範囲**
-SERVICE_CODE_START = 0x0000  # 最小の `Service Code`
-SERVICE_CODE_END = 0xFFFF    # 最大の `Service Code`
+SYSTEM_CODE = 0xFE00  # システムコード
 
-def on_connect(tag):
-    """ NFCタグが接続されたときに実行される関数 """
-    print("\n🔍 NFCタグを検出しました！")
-    print(f"IDm: {tag.idm.hex().upper()}")
-    print(f"PMm: {tag.pmm.hex().upper()}")
-    print(f"📡 `System Code` を `0x{SYSTEM_CODE:04X}` に設定")
-    
-    # **手動で System Code をセット**
-    tag.sys = SYSTEM_CODE
 
-    found_services = []
+def read_data_block(tag: Type3Tag, service_code_number: int, block_code_number: int) -> bytearray:
+    service_code = ServiceCode(service_code_number, サービス属性)
+    block_code = BlockCode(block_code_number)
+    read_bytearray = cast(bytearray, tag.read_without_encryption([service_code], [block_code]))
+    return read_bytearray
 
-    print(f"\n📌 `Area 1A81--1AFF` に対応する `Service Code` を全探索中...")
+def get_student_id(tag: Type3Tag) -> str:
+    student_id_bytearray = read_data_block(tag, サービス番号, ブロックコード)
+    return student_id_bytearray.decode("shift_jis")  # スライスで必要な部分だけ切り出す
 
-    for service_code in range(SERVICE_CODE_START, SERVICE_CODE_END + 1):
-        try:
-            sc = nfc.tag.tt3.ServiceCode(service_code >> 6, service_code & 0x3F)
-            bc = nfc.tag.tt3.BlockCode(0, service=0)
-            data = tag.read_without_encryption([sc], [bc])
 
-            print(f"✅ `Service Code = 0x{service_code:04X}` で読み取り成功！")
-            found_services.append(service_code)
+def on_connect(tag: Tag) -> bool:
+    print("connected")
+    if isinstance(tag, FelicaStandard) and SYSTEM_CODE in tag.request_system_code():  # カードがFeliCaでかつシステムコードが存在する場合
+        tag.idm, tag.pmm, *_ = tag.polling(データの読み込み先のシステムコード)
+        print(get_student_id(tag))
+        print(get_student_name(tag))
+    return True  # Trueを返しておくとタグが存在しなくなるまで待機される
 
-        except Exception:
-            pass  # 読めない `Service Code` は無視
 
-    print("\n📌 読み取れた `Service Code` 一覧:")
-    for service_code in found_services:
-        print(f"  - `0x{service_code:04X}`")
+def on_release(tag: Tag) -> None:
+    print("released")
+
 
 with nfc.ContactlessFrontend("usb") as clf:
-    clf.connect(rdwr={"on-connect": on_connect})
+    while True:
+        clf.connect(rdwr={"on-connect": on_connect, "on-release": on_release})
+
