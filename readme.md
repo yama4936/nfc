@@ -17,7 +17,7 @@
 - 主な機能は何か？
   
   学生証偽装
-  
+
   学生証ピってしておもてなし出来る
 
 ## インストール方法
@@ -36,7 +36,7 @@ git clone https://github.com/yama4936/nfc.git
 実行方法の例
 
 ```
-pip install nfcpy customtkinter pillow
+pip install nfcpy customtkinter pillow python-dotenv
 ```
 
 nfcタグを接続した状態で
@@ -48,6 +48,7 @@ python write_dump_data.py
 ```
 student_id.py
 ```
+![alt text](image.png)
 
 ## ライセンス
 
