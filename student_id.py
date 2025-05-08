@@ -79,6 +79,9 @@ class NFCWelcomeApp(ctk.CTk):
                 file.write("---- NFC Dump ----\n")
                 file.write("\n".join(tag_data))  # 各行を書き込み
                 file.write("\n------------------\n\n")
+                
+            with open("student_id.txt", "a", encoding="utf-8") as file:
+                file.write(f"学籍番号: {extract_student_id(tag_data)}\n")
             
         except Exception as e:
             print("タグ読み取りエラー:", e)
