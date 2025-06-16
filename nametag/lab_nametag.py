@@ -37,27 +37,29 @@ def extract_student_id(tag_data):
     return "未登録"
 
 def create_image_with_text(output_file="default.png", student_id="hello world"):
-    width, height = 1600, 600
+    width, height = 1600, 800
     image = Image.new("RGB", (width, height), color="white")
     draw = ImageDraw.Draw(image)
     try:
         large_font = ImageFont.truetype("/home/yamada/print/M04S_test/GenShinGothic-P-Normal.ttf", 300)
-        small_font = ImageFont.truetype("/home/yamada/print/M04S_test/GenShinGothic-P-Normal.ttf", 100)
+        small_font = ImageFont.truetype("/home/yamada/print/M04S_test/GenShinGothic-P-Normal.ttf", 130)
     except IOError:
         print("フォントが読み込めませんでした。")
         return
-    draw.text((10, 10), student_id, fill="black", font=small_font)
-    bbox = draw.textbbox((0, 0), "こんにちは", font=large_font)
-    draw.text(((width - bbox[2]) // 2, (height - bbox[3]) // 2), "こんにちは", fill="black", font=large_font)
+    draw.text((0, 0), student_id, fill="black", font=small_font)
+    bbox = draw.textbbox((0, 0), "        ", font=large_font)
+    draw.text(((width - bbox[2]) // 2, (height - bbox[3]) // 2), "        ", fill="black", font=large_font)
     image.save(output_file)
     print(f"Image saved as {output_file}")
 
 def print_image(file_path="default.png", width=1156):
-    try:
-        p = Usb(0x0483, 0x5740, 0, in_ep=0x81, out_ep=0x03)
-    except escpos.exceptions.DeviceNotFoundError:
-        print("プリンタが見つかりません。")
-        return
+    printer_lock = threading.Lock()
+    with printer_lock:
+        try:
+            p = Usb(0x0483, 0x5740, 0, in_ep=0x81, out_ep=0x03)
+        except escpos.exceptions.DeviceNotFoundError:
+            print("プリンタが見つかりません。")
+            return
 
     p._raw(RESET)
     p._raw(US + b"\x11\x02" + b"\x03")
@@ -155,15 +157,14 @@ class NFCWelcomeApp(ctk.CTk):
         display_letter()
 
     def start_nfc_thread(self):
-        threading.Thread(target=self.nfc_reader, daemon=True).start()
-
+        thread = threading.Thread(target=self.nfc_reader, daemon=True)
+        thread.start()
+    
     def nfc_reader(self):
-        try:
-            with nfc.ContactlessFrontend("tty:AMA0") as clf:
-                while True:
-                    clf.connect(rdwr={"on-connect": self.on_connect})
-        except Exception as e:
-            print("NFC初期化失敗:", e)
+        with nfc.ContactlessFrontend("usb") as clf:
+            while True:
+                clf.connect(rdwr={"on-connect": self.on_connect})
+                time.sleep(2)  # 読み取り後に2秒待機
 
     def on_connect(self, tag):
         try:
@@ -177,6 +178,8 @@ class NFCWelcomeApp(ctk.CTk):
             print_image("default.png")
         except Exception as e:
             print("タグ読み取りエラー:", e)
+        finally:
+            time.sleep(2)  # リトライ間隔を設定
 
 # Main
 if __name__ == "__main__":

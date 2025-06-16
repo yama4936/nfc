@@ -1,29 +1,28 @@
 import nfc
 import os
-from dotenv import load_dotenv
-
-# .env ファイルの読み込み
-load_dotenv()
-
-STUDENT_ID = os.getenv("STUDENT_ID")
-ID= os.getenv("ID") 
-PMM= os.getenv("PMM") 
-SYS= os.getenv("SYS") 
-
-STUDENT_ID_BYTES = STUDENT_ID.encode().ljust(10, b"\x00") + b"\x30\x00"
 
 SYSTEM_CODE = 0xFE00  # エミュレーションする System Code
+#11z188104 小笠原先生
+#11z121316 南谷先生
+#11z190117 伊藤先生
+#11z104119 目加田先生
+#11z104118 長谷川先生
+#11z190119 土屋先生
+#11z103103 ラシキア先生
+#11z112120 道満先生
+#11z112104 鬼頭先生
+#11z102107 鈴木先生
 
 SERVICE_CODES = {
     0x0000: {
         0: b"\x00" * 16, 
-        1: STUDENT_ID_BYTES,
+        1: b"01T323039\x00\x00\x00\x00\x00\x30\x00",  # 任意の学籍番号
     },
     0x0001: {
         0: b"\x00" * 16, 
     },
     0x0002: {
-        0: b"2301217320230401",
+        0: b"2301217320121201",
     },
     0x0003: {
         0: b"\x00" * 16,
@@ -37,7 +36,7 @@ SERVICE_CODES = {
 }
 
 def on_startup(target):
-    target.sensf_res = bytearray.fromhex('01' + ID + PMM + f"{SYSTEM_CODE:04X}")
+    target.sensf_res = bytearray.fromhex('01' + '01103E00B71F2302' + '033242828247AAFF' + f"{SYSTEM_CODE:04X}")
     target.brty = "212F"
     return target
 
